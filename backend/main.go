@@ -532,6 +532,8 @@ func (a *App) handleRecord(rr dns.RR, clientAddr net.Addr, network *string) {
 	switch v := rr.(type) {
 	case *dns.A:
 		a.processARecord(*v, clientAddr, network)
+	case *dns.AAAA:
+		a.processAAAARecord(*v, clientAddr, network)
 	case *dns.CNAME:
 		a.processCNameRecord(*v, clientAddr, network)
 	}
@@ -555,7 +557,7 @@ func (a *App) processARecord(aRecord dns.A, clientAddr net.Addr, network *string
 
 	ttlDuration := aRecord.Hdr.Ttl + a.config.Netfilter.IPSet.AdditionalTTL
 
-	a.records.AddARecord(aRecord.Hdr.Name[:len(aRecord.Hdr.Name)-1], aRecord.A, ttlDuration)
+	a.records.AddIPRecord(aRecord.Hdr.Name[:len(aRecord.Hdr.Name)-1], aRecord.A, ttlDuration)
 
 	names := a.records.GetAliases(aRecord.Hdr.Name[:len(aRecord.Hdr.Name)-1])
 	for _, group := range a.groups {
@@ -587,6 +589,56 @@ func (a *App) processARecord(aRecord dns.A, clientAddr net.Addr, network *string
 	}
 }
 
+func (a *App) processAAAARecord(aaaaRecord dns.AAAA, clientAddr net.Addr, network *string) {
+	var clientAddrStr, networkStr string
+	if clientAddr != nil {
+		clientAddrStr = clientAddr.String()
+	}
+	if network != nil {
+		networkStr = *network
+	}
+	log.Trace().
+		Str("name", aaaaRecord.Hdr.Name).
+		Str("address", aaaaRecord.AAAA.String()).
+		Int("ttl", int(aaaaRecord.Hdr.Ttl)).
+		Str("clientAddr", clientAddrStr).
+		Str("network", networkStr).
+		Msg("processing a record")
+
+	ttlDuration := aaaaRecord.Hdr.Ttl + a.config.Netfilter.IPSet.AdditionalTTL
+
+	a.records.AddIPRecord(aaaaRecord.Hdr.Name[:len(aaaaRecord.Hdr.Name)-1], aaaaRecord.AAAA, ttlDuration)
+
+	names := a.records.GetAliases(aaaaRecord.Hdr.Name[:len(aaaaRecord.Hdr.Name)-1])
+	for _, group := range a.groups {
+	Rule:
+		for _, domain := range group.Rules {
+			if !domain.IsEnabled() {
+				continue
+			}
+			for _, name := range names {
+				if !domain.IsMatch(name) {
+					continue
+				}
+				// TODO: Check already existed
+				if err := group.AddIP(aaaaRecord.AAAA, ttlDuration); err != nil {
+					log.Error().
+						Str("address", aaaaRecord.AAAA.String()).
+						Err(err).
+						Msg("failed to add address")
+				} else {
+					log.Debug().
+						Str("address", aaaaRecord.AAAA.String()).
+						Str("aRecordDomain", aaaaRecord.Hdr.Name).
+						Str("cNameDomain", name).
+						Msg("add address")
+				}
+				break Rule
+			}
+		}
+	}
+}
+
 func (a *App) processCNameRecord(cNameRecord dns.CNAME, clientAddr net.Addr, network *string) {
 	var clientAddrStr, networkStr string
 	if clientAddr != nil {
@@ -605,12 +657,12 @@ func (a *App) processCNameRecord(cNameRecord dns.CNAME, clientAddr net.Addr, net
 
 	ttlDuration := cNameRecord.Hdr.Ttl + a.config.Netfilter.IPSet.AdditionalTTL
 
-	a.records.AddCNameRecord(cNameRecord.Hdr.Name[:len(cNameRecord.Hdr.Name)-1],
+	a.records.AddAliasRecord(cNameRecord.Hdr.Name[:len(cNameRecord.Hdr.Name)-1],
 		cNameRecord.Target[:len(cNameRecord.Target)-1],
 		ttlDuration)
 
 	now := time.Now()
-	aRecords := a.records.GetARecords(cNameRecord.Hdr.Name[:len(cNameRecord.Hdr.Name)-1])
+	aRecords := a.records.GetIPRecords(cNameRecord.Hdr.Name[:len(cNameRecord.Hdr.Name)-1])
 	names := a.records.GetAliases(cNameRecord.Hdr.Name[:len(cNameRecord.Hdr.Name)-1])
 	for _, group := range a.groups {
 	Rule:
