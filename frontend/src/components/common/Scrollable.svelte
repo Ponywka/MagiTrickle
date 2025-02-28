@@ -22,10 +22,8 @@
   :global {
     [data-scroll-area-root] {
       position: relative;
-      height: calc(100vh - 1rem - 150px);
+      height: calc(100vh - 140px);
       border-radius: 0.5rem;
-      /* TODO: use it, looks cool but need dynamic height; */
-      /* border: 1px solid var(--bg-light-extra); */
     }
 
     [data-scroll-area-viewport] {
