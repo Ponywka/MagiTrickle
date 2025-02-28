@@ -237,7 +237,7 @@
               bind:selected={data[group_index].interface}
             />
             <Tooltip value="Fix Protection">
-              <Switch bind:checked={data[group_index].fixProtect} />
+              <Switch class="fix-protected" bind:checked={data[group_index].fixProtect} />
             </Tooltip>
             <Tooltip value="Delete Group">
               <Button small onclick={() => deleteGroup(group_index)}>
@@ -363,7 +363,13 @@
   .group-actions {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
+  }
+
+  :global(.fix-protected) {
+    position: relative;
+    top: 1px;
   }
 
   .group-rules-header {
