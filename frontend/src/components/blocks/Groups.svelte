@@ -455,7 +455,7 @@
     cursor: pointer;
   }
 
-  @media (max-width: 500px) {
+  @media (max-width: 600px) {
     .group-header {
       display: flex;
       flex-direction: column;

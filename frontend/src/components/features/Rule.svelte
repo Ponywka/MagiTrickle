@@ -219,7 +219,7 @@
     display: none;
   }
 
-  @media (max-width: 500px) {
+  @media (max-width: 600px) {
     .container {
       display: flex;
       flex-direction: row;
