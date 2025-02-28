@@ -1,6 +1,6 @@
 //go:build kn
 
-package magitrickle
+package app
 
 import "fmt"
 
