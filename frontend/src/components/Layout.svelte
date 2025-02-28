@@ -53,7 +53,8 @@
 
   :global {
     [data-tabs-root] {
-      width: 1000px;
+      max-width: 1000px;
+      width: 100%;
     }
 
     [data-tabs-list] {
@@ -88,7 +89,7 @@
     }
   }
 
-  @media (max-width: 500px) {
+  @media (max-width: 600px) {
     :global {
       [data-tabs-root] {
         width: 100%;
