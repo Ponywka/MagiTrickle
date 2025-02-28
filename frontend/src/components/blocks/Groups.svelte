@@ -306,15 +306,13 @@
   }
 
   .group-header {
-    & {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem;
-      border-radius: 0.5rem;
-      background-color: var(--bg-light);
-      position: relative;
-    }
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: var(--bg-light);
+    position: relative;
   }
 
   .group-left {
@@ -449,5 +447,40 @@
     padding: 0;
     border: none;
     cursor: pointer;
+  }
+
+  @media (max-width: 500px) {
+    .group-header {
+      display: flex;
+      flex-direction: column;
+      align-items: start;
+      justify-content: center;
+    }
+
+    .group-left {
+      & {
+        width: 100%;
+      }
+      & input[type="text"] {
+        width: calc(100% - 2rem);
+        margin-left: 2.5rem;
+      }
+      & label {
+        height: calc(100% + 1px);
+      }
+    }
+
+    .group-actions {
+      width: calc(100% - 2rem);
+      justify-content: end;
+      margin-left: 2rem;
+    }
+
+    .group-rules-header {
+      height: 1px;
+      & .group-rules-header-column {
+        display: none;
+      }
+    }
   }
 </style>

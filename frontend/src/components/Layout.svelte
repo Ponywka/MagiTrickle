@@ -85,7 +85,14 @@
 
     [data-tabs-content] {
       padding-top: 1rem;
-      padding-bottom: 1rem;
+    }
+  }
+
+  @media (max-width: 500px) {
+    :global {
+      [data-tabs-root] {
+        width: 100%;
+      }
     }
   }
 </style>
