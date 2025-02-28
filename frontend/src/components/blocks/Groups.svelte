@@ -361,7 +361,13 @@
   .group-actions {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
+  }
+
+  :global(.fix-protected) {
+    position: relative;
+    top: 1px;
   }
 
   .group-rules-header {
