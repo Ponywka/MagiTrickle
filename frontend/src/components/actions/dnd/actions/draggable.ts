@@ -60,7 +60,6 @@ export function draggable<T>(node: HTMLElement, options: DraggableOptions<T>) {
 
   function handlePointerDown(event: PointerEvent) {
     if (options.disabled) return;
-
     // If the target is an interactive element, don't start dragging
     if (isInteractiveElement(event.target as HTMLElement)) {
       return;

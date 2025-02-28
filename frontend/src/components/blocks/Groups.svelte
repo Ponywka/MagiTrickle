@@ -16,7 +16,16 @@
   import Button from "../common/Button.svelte";
   import Select from "../common/Select.svelte";
 
+  import { InfiniteLoader, loaderState } from "svelte-infinite";
+
   let data: Group[] = $state([]);
+  let showed_limit: number[] = $state([]);
+  let showed_data: Group[] = $derived.by(() =>
+    data.map((group, index) => ({
+      ...group,
+      rules: group.rules.slice(0, showed_limit[index]),
+    })),
+  );
   let counter = $state(-2); // skip first update on init
 
   function onRuleDrop(event: CustomEvent) {
@@ -51,6 +60,7 @@
 
   onMount(async () => {
     data = (await fetcher.get<{ groups: Group[] }>("/groups?with_rules=true"))?.groups ?? [];
+    showed_limit = data.map((group) => (group.rules.length > 20 ? 20 : group.rules.length));
     window.addEventListener("rule_drop", onRuleDrop);
     window.addEventListener("beforeunload", unsavedChanges);
   });
@@ -73,14 +83,10 @@
   }
 
   async function addRuleToGroup(group_index: number, rule: Rule, focus = false) {
-    data[group_index].rules.push(rule);
-    // FIXME: consider to add to the beginning of the group
+    data[group_index].rules.unshift(rule);
     if (!focus) return;
     await tick();
-    const el = document.querySelector(
-      `.rule[data-group-index="${group_index}"][data-index="${data[group_index].rules.length - 1}"]`,
-    );
-    el?.scrollIntoView({ behavior: "auto" });
+    const el = document.querySelector(`.rule[data-group-index="${group_index}"][data-index="0"]`);
     el?.querySelector<HTMLInputElement>("div.name input")?.focus();
   }
 
@@ -162,6 +168,16 @@
       }),
     );
   }
+
+  async function loadMore(group_index: number): Promise<void> {
+    if ((showed_limit[group_index] = data[group_index].rules.length)) return;
+    showed_limit[group_index] += 20;
+    if (showed_limit[group_index] > data[group_index].rules.length) {
+      showed_limit[group_index] = data[group_index].rules.length;
+      return;
+    }
+    loaderState.loaded();
+  }
 </script>
 
 <div class="group-controls">
@@ -193,7 +209,7 @@
 </div>
 
 <Scrollable>
-  {#each data as group, group_index (group.id)}
+  {#each showed_data as group, group_index (group.id)}
     <div class="group" data-uuid={group.id}>
       <Collapsible.Root open={true}>
         <div
@@ -206,28 +222,28 @@
         >
           <div class="group-left">
             <label class="group-color" style="background: {group.color}">
-              <input type="color" bind:value={group.color} />
+              <input type="color" bind:value={data[group_index].color} />
             </label>
             <input
               type="text"
               placeholder="group name..."
               class="group-name"
-              bind:value={group.name}
+              bind:value={data[group_index].name}
             />
           </div>
           <div class="group-actions">
             <Select
               options={INTERFACES.map((item) => ({ value: item, label: item }))}
-              bind:selected={group.interface}
+              bind:selected={data[group_index].interface}
             />
-            <Switch bind:checked={group.enable}/>
+            <Switch bind:checked={group.enable} />
             <Tooltip value="Delete Group">
               <Button small onclick={() => deleteGroup(group_index)}>
                 <Delete size={20} />
               </Button>
             </Tooltip>
             <Tooltip value="Add Rule">
-              <Button small onclick={() => addRuleToGroup(group_index, defaultRule(), false)}>
+              <Button small onclick={() => addRuleToGroup(group_index, defaultRule(), true)}>
                 <Add size={20} />
               </Button>
             </Tooltip>
@@ -245,7 +261,7 @@
               <div class="group-rules-header">
                 <div class="group-rules-header-column total">
                   <Sigma size={18}></Sigma>
-                  {group.rules.length}
+                  {data[group_index].rules.length}
                 </div>
                 <div class="group-rules-header-column">Name</div>
                 <div class="group-rules-header-column">Type</div>
@@ -255,20 +271,21 @@
               </div>
             {/if}
             <div class="group-rules">
-              <!-- FIXME: use a virtual list to fix rendering performance for large groups (svelte-tiny-virtual-list) -->
-              {#each group.rules as rule, rule_index (rule.id)}
-                <RuleComponent
-                  key={rule.id}
-                  bind:rule={group.rules[rule_index]}
-                  {rule_index}
-                  {group_index}
-                  rule_id={rule.id}
-                  group_id={group.id}
-                  onChangeIndex={changeRuleIndex}
-                  onDelete={deleteRuleFromGroup}
-                  style={rule_index % 2 ? "" : "background-color: var(--bg-light)"}
-                />
-              {/each}
+              <InfiniteLoader triggerLoad={() => loadMore(group_index)} loopDetectionTimeout={10}>
+                {#each group.rules as rule, rule_index (rule.id)}
+                  <RuleComponent
+                    key={`${group.id}-${rule.id}`}
+                    bind:rule={data[group_index].rules[rule_index]}
+                    {rule_index}
+                    {group_index}
+                    rule_id={rule.id}
+                    group_id={group.id}
+                    onChangeIndex={changeRuleIndex}
+                    onDelete={deleteRuleFromGroup}
+                    style={rule_index % 2 ? "" : "background-color: var(--bg-light)"}
+                  />
+                {/each}
+              </InfiniteLoader>
             </div>
           </div>
         </Collapsible.Content>
@@ -399,6 +416,9 @@
         outline: 1px solid var(--bg-light-extra);
         color: var(--text);
       }
+    }
+    .infinite-intersection-target {
+      padding-block: 0 !important;
     }
   }
 

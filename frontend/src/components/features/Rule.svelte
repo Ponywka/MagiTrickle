@@ -64,6 +64,18 @@
       }),
     );
   }
+
+  function onFocusInput(event: FocusEvent) {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+    target.closest(".rule")?.setAttribute("draggable", "false");
+  }
+
+  function onBlurInput(event: FocusEvent) {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+    target.closest(".rule")?.setAttribute("draggable", "true");
+  }
 </script>
 
 <div
@@ -85,7 +97,14 @@
 >
   <div class="grip" data-index={rule_index} data-group-index={group_index}><Grip /></div>
   <div class="name">
-    <input type="text" placeholder="rule name..." class="table-input" bind:value={rule.name} />
+    <input
+      type="text"
+      placeholder="rule name..."
+      class="table-input"
+      bind:value={rule.name}
+      onfocus={onFocusInput}
+      onblur={onBlurInput}
+    />
   </div>
   <div class="type">
     <Select options={RULE_TYPES} bind:selected={rule.type} onSelectedChange={patternValidation} />
@@ -94,11 +113,13 @@
     <input
       type="text"
       placeholder="rule pattern..."
-      class="table-input pattern-input"
+      class="table-input pattern-input interactive"
       bind:value={rule.rule}
       bind:this={input}
       oninput={patternValidation}
       onfocusout={patternValidation}
+      onfocus={onFocusInput}
+      onblur={onBlurInput}
     />
   </div>
   <div class="actions">
