@@ -22,7 +22,7 @@ type Records struct {
 	records map[string]interface{}
 }
 
-func (r *Records) AddCNameRecord(domainName, alias string, ttl uint32) {
+func (r *Records) AddAliasRecord(domainName, alias string, ttl uint32) {
 	if domainName == alias {
 		return
 	}
@@ -35,7 +35,7 @@ func (r *Records) AddCNameRecord(domainName, alias string, ttl uint32) {
 	r.locker.Unlock()
 }
 
-func (r *Records) AddARecord(domainName string, addr net.IP, ttl uint32) {
+func (r *Records) AddIPRecord(domainName string, addr net.IP, ttl uint32) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 
@@ -96,7 +96,7 @@ func (r *Records) GetAliases(domainName string) []string {
 	return domainList
 }
 
-func (r *Records) GetARecords(domainName string) []*ARecord {
+func (r *Records) GetIPRecords(domainName string) []*ARecord {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	r.cleanupRecords()

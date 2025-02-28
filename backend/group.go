@@ -227,7 +227,7 @@ func (g *Group) Sync() error {
 				continue
 			}
 
-			domainAddresses := g.app.records.GetARecords(domainName)
+			domainAddresses := g.app.records.GetIPRecords(domainName)
 			for _, address := range domainAddresses {
 				ttl := uint32(now.Sub(address.Deadline).Seconds())
 				if oldTTL, ok := addresses[string(address.Address)]; !ok || ttl > oldTTL {
