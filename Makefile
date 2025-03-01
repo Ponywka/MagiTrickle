@@ -26,7 +26,7 @@ GOMIPS ?= softfloat
 GOARM ?=
 
 GO_FLAGS = GOOS=$(GOOS) GOARCH=$(GOARCH) GOMIPS=$(GOMIPS) GOARM=$(GOARM)
-GO_TAGS ?=
+GO_TAGS ?= kn
 ifeq ($(PLATFORM),entware)
 	GO_TAGS += entware
 endif
@@ -44,16 +44,17 @@ clear:
 
 build_backend:
 	$(GO_FLAGS) go build -C ./backend $(PARAMS) -o ../$(BIN_DIR)/magitrickled ./cmd/magitrickled
+	upx --best $(BIN_DIR)/magitrickled
 
 build_frontend_legacy:
-	cd ./frontend_legacy && deno install
-	cd ./frontend_legacy && deno task build
+	cd ./frontend_legacy && npm install
+	cd ./frontend_legacy && npm run build
 	mkdir -p $(PKG_DIR)/data/opt/usr/share/magitrickle/skins/legacy
 	cp -r ./frontend_legacy/dist/* $(PKG_DIR)/data/opt/usr/share/magitrickle/skins/legacy/
 
 build_frontend:
-	cd ./frontend && deno install
-	cd ./frontend && VITE_UPSTREAM_VERSION=$(UPSTREAM_VERSION) deno task build
+	cd ./frontend && npm install
+	cd ./frontend && VITE_UPSTREAM_VERSION=$(UPSTREAM_VERSION) npm run build
 	mkdir -p $(PKG_DIR)/data/opt/usr/share/magitrickle/skins/default
 	cp -r ./frontend/dist/* $(PKG_DIR)/data/opt/usr/share/magitrickle/skins/default/
 
@@ -71,6 +72,6 @@ package:
 	echo 'Priority: optional' >> $(PKG_DIR)/control/control
 	echo 'Depends: libc, iptables, socat' >> $(PKG_DIR)/control/control
 	cp -r ./opt $(PKG_DIR)/data/
-	tar -C $(PKG_DIR)/control -czvf $(PKG_DIR)/control.tar.gz .
-	tar -C $(PKG_DIR)/data -czvf $(PKG_DIR)/data.tar.gz .
-	tar -C $(PKG_DIR) -czvf $(BUILD_DIR)/$(APP_NAME)_$(UPSTREAM_VERSION)$(PRERELEASE_POSTFIX)-$(PKG_REVISION)_$(TARGET).ipk ./debian-binary ./control.tar.gz ./data.tar.gz
+	tar -C $(PKG_DIR)/control -czvf $(PKG_DIR)/control.tar.gz --owner=0 --group=0 .
+	tar -C $(PKG_DIR)/data -czvf $(PKG_DIR)/data.tar.gz --owner=0 --group=0 .
+	tar -C $(PKG_DIR) -czvf $(BUILD_DIR)/$(APP_NAME)_$(UPSTREAM_VERSION)$(PRERELEASE_POSTFIX)-$(PKG_REVISION)_$(TARGET).ipk --owner=0 --group=0 ./debian-binary ./control.tar.gz ./data.tar.gz

@@ -46,4 +46,5 @@ html {
 
 body {
   background-color: var(--bg-dark);
+  margin-bottom: 0;
 }

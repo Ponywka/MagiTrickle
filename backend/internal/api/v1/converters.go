@@ -31,7 +31,12 @@ func FromGroupReq(req types.GroupReq, existing *models.Group) (*models.Group, er
 	}
 	group.Color = req.Color
 	group.Interface = req.Interface
-	group.FixProtect = req.FixProtect
+	group.Enable = true
+	// TODO: Make required after 1.0.0
+	if req.Enable != nil {
+		group.Enable = *req.Enable
+	}
+
 	if req.Rules != nil {
 		newRules := make([]*models.Rule, len(*req.Rules))
 		for i, ruleReq := range *req.Rules {
@@ -79,11 +84,11 @@ func ToGroupsRes(groups []*models.Group, withRules bool) types.GroupsRes {
 
 func ToGroupRes(group *models.Group, withRules bool) types.GroupRes {
 	groupRes := types.GroupRes{
-		ID:         group.ID,
-		Name:       group.Name,
-		Color:      group.Color,
-		Interface:  group.Interface,
-		FixProtect: group.FixProtect,
+		ID:        group.ID,
+		Name:      group.Name,
+		Color:     group.Color,
+		Interface: group.Interface,
+		Enable:    group.Enable,
 	}
 	if withRules {
 		groupRes.RulesRes = ToRulesRes(group.Rules)

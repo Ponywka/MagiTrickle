@@ -14,7 +14,7 @@ export type Group = {
   name?: string;
   color: string;
   interface: string;
-  fixProtect: boolean;
+  enable: boolean;
   rules: Rule[];
 };
 

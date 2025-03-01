@@ -47,6 +47,10 @@ func (g *Group) AddIP(address net.IP, ttl uint32) error {
 	if !g.enabled.Load() {
 		return nil
 	}
+
+	if !g.Group.Enable {
+		return nil
+	}
 	return g.addIP(address, ttl)
 }
 
@@ -58,6 +62,10 @@ func (g *Group) DelIP(address net.IP) error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
 	if !g.enabled.Load() {
+		return nil
+	}
+
+	if !g.Group.Enable {
 		return nil
 	}
 	return g.delIP(address)
@@ -73,6 +81,11 @@ func (g *Group) ListIPs() (map[string]*uint32, error) {
 	if !g.enabled.Load() {
 		return nil, nil
 	}
+
+	if !g.Group.Enable {
+		return nil, nil
+	}
+
 	return g.listIPs()
 }
 
@@ -120,53 +133,26 @@ func (g *Group) unlinkIfaceFromIPSet() error {
 	return nil
 }
 
-func (g *Group) fixProtection() error {
-	if g.app.nfHelper.IPTables4 != nil {
-		err := g.app.nfHelper.IPTables4.AppendUnique("filter", "_NDM_SL_FORWARD", "-o", g.Interface, "-m", "state", "--state", "NEW", "-j", "_NDM_SL_PROTECT")
-		if err != nil {
-			return fmt.Errorf("failed to fix protect for IPv4: %w", err)
-		}
-	}
-	if g.app.nfHelper.IPTables6 != nil {
-		err := g.app.nfHelper.IPTables6.AppendUnique("filter", "_NDM_SL_FORWARD", "-o", g.Interface, "-j", "_NDM_SL_PROTECT")
-		if err != nil {
-			return fmt.Errorf("failed to fix protect for IPv6: %w", err)
-		}
-	}
-	return nil
-}
-
-func (g *Group) unfixProtection() error {
-	var errs []error
-	if g.app.nfHelper.IPTables4 != nil {
-		err := g.app.nfHelper.IPTables4.Delete("filter", "_NDM_SL_FORWARD", "-o", g.Interface, "-m", "state", "--state", "NEW", "-j", "_NDM_SL_PROTECT")
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to remove fix protect: %w", err))
-		}
-	}
-	if g.app.nfHelper.IPTables6 != nil {
-		err := g.app.nfHelper.IPTables6.Delete("filter", "_NDM_SL_FORWARD", "-o", g.Interface, "-j", "_NDM_SL_PROTECT")
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to remove fix protect: %w", err))
-		}
-	}
-	return errors.Join(errs...)
-}
-
 func (g *Group) enable() error {
 	if !g.enabled.CompareAndSwap(false, true) {
 		return nil
 	}
-	if err := g.createIPSet(); err != nil {
+
+	if !g.Group.Enable {
+		return nil
+	}
+
+	err := g.createIPSet()
+	if err != nil {
 		return err
 	}
 	if err := g.linkIfaceToIPSet(); err != nil {
 		return err
 	}
-	if g.FixProtect {
-		if err := g.fixProtection(); err != nil {
-			return err
-		}
+
+	err = g.routerSpecificPatches("", "")
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -185,10 +171,12 @@ func (g *Group) disable() error {
 		return nil
 	}
 	defer g.enabled.Store(false)
-	var errs []error
-	if g.FixProtect {
-		errs = append(errs, g.unfixProtection())
+
+	if !g.Group.Enable {
+		return nil
 	}
+
+	var errs []error
 	errs = append(errs, g.unlinkIfaceFromIPSet())
 	errs = append(errs, g.deleteIPSet())
 	return errors.Join(errs...)
@@ -203,6 +191,15 @@ func (g *Group) Disable() error {
 func (g *Group) Sync() error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
+
+	if !g.enabled.Load() {
+		return nil
+	}
+
+	if !g.Group.Enable {
+		return nil
+	}
+
 	now := time.Now()
 	addresses := make(map[string]uint32)
 	knownDomains := g.app.records.ListKnownDomains()
@@ -261,32 +258,35 @@ func (g *Group) Sync() error {
 func (g *Group) NetfilterDHook(iptType, table string) error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
-	if g.enabled.Load() {
-		if g.FixProtect && table == "filter" {
-			if iptType == "" || iptType == "iptables" {
-				if g.app.nfHelper.IPTables4 != nil {
-					err := g.app.nfHelper.IPTables4.AppendUnique("filter", "_NDM_SL_FORWARD", "-o", g.Interface, "-m", "state", "--state", "NEW", "-j", "_NDM_SL_PROTECT")
-					if err != nil {
-						return fmt.Errorf("failed to fix protect: %w", err)
-					}
-				}
-			}
-			if iptType == "" || iptType == "ip6tables" {
-				if g.app.nfHelper.IPTables6 != nil {
-					err := g.app.nfHelper.IPTables6.AppendUnique("filter", "_NDM_SL_FORWARD", "-o", g.Interface, "-m", "state", "--state", "NEW", "-j", "_NDM_SL_PROTECT")
-					if err != nil {
-						return fmt.Errorf("failed to fix protect: %w", err)
-					}
-				}
-			}
-		}
-		return g.ipsetToLink.NetfilterDHook(iptType, table)
+
+	if !g.enabled.Load() {
+		return nil
 	}
-	return nil
+
+	if !g.Group.Enable {
+		return nil
+	}
+
+	var errs []error
+	if g.enabled.Load() {
+		errs = append(errs, g.routerSpecificPatches(iptType, table))
+		errs = append(errs, g.ipsetToLink.NetfilterDHook(iptType, table))
+	}
+
+	return errors.Join(errs...)
 }
 
 func (g *Group) LinkUpdateHook(event netlink.LinkUpdate) error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
+
+	if !g.enabled.Load() {
+		return nil
+	}
+
+	if !g.Group.Enable {
+		return nil
+	}
+
 	return g.ipsetToLink.LinkUpdateHook(event)
 }

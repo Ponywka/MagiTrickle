@@ -10,8 +10,8 @@ definitions:
       color:
         example: '#ffffff'
         type: string
-      fixProtect:
-        example: false
+      enable:
+        example: true
         type: boolean
       id:
         example: 0a1b2c3d
@@ -32,8 +32,8 @@ definitions:
       color:
         example: '#ffffff'
         type: string
-      fixProtect:
-        example: false
+      enable:
+        example: true
         type: boolean
       id:
         example: 0a1b2c3d

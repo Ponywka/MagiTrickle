@@ -16,6 +16,7 @@ export default defineConfig(() => ({
     ViteMinifyPlugin(),
   ],
   build: {
+    emptyOutDir: true,
     target: "esnext",
     // assetsInlineLimit: 400000, // inline fonts
   },

@@ -64,6 +64,18 @@
       }),
     );
   }
+
+  function onFocusInput(event: FocusEvent) {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+    target.closest(".rule")?.setAttribute("draggable", "false");
+  }
+
+  function onBlurInput(event: FocusEvent) {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+    target.closest(".rule")?.setAttribute("draggable", "true");
+  }
 </script>
 
 <div
@@ -85,24 +97,38 @@
 >
   <div class="grip" data-index={rule_index} data-group-index={group_index}><Grip /></div>
   <div class="name">
-    <input type="text" placeholder="rule name..." class="table-input" bind:value={rule.name} />
+    <div class="label">Name</div>
+    <input
+      type="text"
+      placeholder="rule name..."
+      class="table-input"
+      bind:value={rule.name}
+      onfocus={onFocusInput}
+      onblur={onBlurInput}
+    />
   </div>
   <div class="type">
+    <div class="label">Type</div>
     <Select options={RULE_TYPES} bind:selected={rule.type} onSelectedChange={patternValidation} />
   </div>
   <div class="pattern">
+    <div class="label">Pattern</div>
     <input
       type="text"
       placeholder="rule pattern..."
-      class="table-input pattern-input"
+      class="table-input pattern-input interactive"
       bind:value={rule.rule}
       bind:this={input}
       oninput={patternValidation}
       onfocusout={patternValidation}
+      onfocus={onFocusInput}
+      onblur={onBlurInput}
     />
   </div>
   <div class="actions">
-    <Switch bind:checked={rule.enable} class="interactive" />
+    <Tooltip value="Enable Rule">
+      <Switch bind:checked={rule.enable} class="interactive" />
+    </Tooltip>
     <Tooltip value="Delete Rule">
       <Button
         small
@@ -184,5 +210,52 @@
   :global(.pattern-input.invalid),
   :global(.pattern-input.invalid:focus-visible) {
     border-bottom: 1px solid var(--red);
+  }
+
+  .label {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    width: 4.2rem;
+    text-align: right;
+    padding-right: 0.2rem;
+    display: none;
+  }
+
+  @media (max-width: 600px) {
+    .container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      padding-top: 0.5rem;
+    }
+    .label {
+      display: block;
+    }
+    .pattern .label,
+    .name .label {
+      position: relative;
+      top: 0.1rem;
+      right: 0.3rem;
+    }
+    .grip {
+      display: none;
+    }
+    .name {
+      order: 1;
+      width: 100%;
+    }
+    .pattern {
+      order: 2;
+      width: 100%;
+    }
+    .type {
+      order: 3;
+      width: calc(50% - 0.5rem);
+    }
+    .actions {
+      order: 4;
+      width: calc(50% - 0.5rem);
+      justify-content: end;
+    }
   }
 </style>

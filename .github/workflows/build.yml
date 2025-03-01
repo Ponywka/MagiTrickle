@@ -54,10 +54,10 @@ jobs:
           fetch-depth: 0
 
 
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
+      - name: Set up Node.JS
+        uses: actions/setup-node@v4
         with:
-          deno-version: '2.2.2'
+          node-version: 22
 
       - name: Set up Go
         uses: actions/setup-go@v3
@@ -67,11 +67,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot
+          sudo apt-get install -y fakeroot upx
 
       - name: Build and Package
         run: |
-          PLATFORM=${{ matrix.platform }} TARGET=${{ matrix.target }} GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOMIPS=${{ matrix.gomips }} GOARM=${{ matrix.goarm }} make
+          PLATFORM=${{ matrix.platform }} TARGET=${{ matrix.target }} GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOMIPS=${{ matrix.gomips }} GOARM=${{ matrix.goarm }} GO_TAGS=kn make
 
       - name: Fetching file list for artifact
         if: ${{ github.event_name != 'release' }}

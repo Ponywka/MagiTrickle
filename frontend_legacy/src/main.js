@@ -34,7 +34,7 @@ class App {
                 `<h2>Создать группу</h2>`+
                 `<label for="groupCreateName">Имя группы:</label><input id="groupCreateName"><br/>`+
                 `<label for="groupCreateInterface">Интерфейс:</label><select id="groupCreateInterface"></select><br/>`+
-                `<label for="groupCreateFixProtect">Пометить интерфейс для выхода в интернет</label><input id="groupCreateFixProtect" type="checkbox"><br/>`+
+                `<label for="groupCreateEnable">Активировать группу</label><input id="groupCreateEnable" type="checkbox"><br/>`+
                 `<button id="btnCreateGroup">Создать</button>`+
             `</div>`+
         ``;
@@ -100,7 +100,7 @@ class App {
             }, ``+
                 `<label for="group-${group.id}-name">Имя группы:</label><input id="group-${group.id}-name" value="${group.name}"><br/>`+
                 `<label for="group-${group.id}-interface">Интерфейс:</label><select id="group-${group.id}-interface"></select><br/>`+
-                `<label for="group-${group.id}-fixProtect">Пометить интерфейс для выхода в интернет</label><input id="group-${group.id}-fixProtect" type="checkbox" ${group.fixProtect ? "checked" : ""}><br/>`+
+                `<label for="group-${group.id}-enable">Активировать группу</label><input id="group-${group.id}-enable" type="checkbox" ${group.enable ? "checked" : ""}><br/>`+
                 `<button id="group-${group.id}-btnUpdateGroup">Сохранить</button><button id="group-${group.id}-btnDeleteGroup">Удалить</button><br/>`+
                 `<h3>Правила</h3>`+
                 `<div id="group-${group.id}-rules"></div>`+
@@ -119,7 +119,7 @@ class App {
             this.populateInterfaces(groupElement.querySelector(`#group-${group.id}-interface`), this.interfaces, group.interface);
             groupElement.querySelector(`#group-${group.id}-name`).onchange = () => this.markUnsaved(groupElement);
             groupElement.querySelector(`#group-${group.id}-interface`).onchange = () => this.markUnsaved(groupElement);
-            groupElement.querySelector(`#group-${group.id}-fixProtect`).onchange = () => this.markUnsaved(groupElement);
+            groupElement.querySelector(`#group-${group.id}-enable`).onchange = () => this.markUnsaved(groupElement);
             groupElement.querySelector(`#group-${group.id}-btnUpdateGroup`).onclick = () => this.updateGroup(group.id);
             groupElement.querySelector(`#group-${group.id}-btnDeleteGroup`).onclick = () => this.deleteGroup(group.id);
             groupElement.querySelector(`#group-${group.id}-btnCreateRule`).onclick = () => this.createRule(group.id);
@@ -162,7 +162,7 @@ class App {
             body: JSON.stringify({
                 name: document.getElementById("groupCreateName").value,
                 interface: document.getElementById("groupCreateInterface").value,
-                fixProtect: document.getElementById("groupCreateFixProtect").checked,
+                enable: document.getElementById("groupCreateEnable").checked,
             })
         });
         await this.fetchGroups();
@@ -177,7 +177,7 @@ class App {
             body: JSON.stringify({
                 name: document.getElementById(`group-${groupId}-name`).value,
                 interface: document.getElementById(`group-${groupId}-interface`).value,
-                fixProtect: document.getElementById(`group-${groupId}-fixProtect`).checked
+                enable: document.getElementById(`group-${groupId}-enable`).checked
             })
         });
         await this.fetchGroups();

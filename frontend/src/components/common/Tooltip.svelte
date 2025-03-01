@@ -18,10 +18,7 @@
       {@render children()}
     </Tooltip.Trigger>
     <Tooltip.Content sideOffset={5}>
-      <!-- <Tooltip.Arrow /> -->
-      <div class="value">
-        {value}
-      </div>
+      {value}
     </Tooltip.Content>
   </Tooltip.Root>
 </Tooltip.Provider>
@@ -33,11 +30,6 @@
       border: none;
       padding: 0;
       margin: 0;
-    }
-
-    [data-tooltip-arrow] {
-      border-left: 1px solid var(--bg-light);
-      border-top: 1px solid var(--bg-light);
     }
 
     [data-tooltip-content] {
