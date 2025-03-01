@@ -18,6 +18,8 @@
 
   import { InfiniteLoader, loaderState } from "svelte-infinite";
 
+  import { InfiniteLoader, loaderState } from "svelte-infinite";
+
   let data: Group[] = $state([]);
   let showed_limit: number[] = $state([]);
   let showed_data: Group[] = $derived.by(() =>
