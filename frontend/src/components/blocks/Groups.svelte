@@ -15,9 +15,6 @@
   import Scrollable from "../common/Scrollable.svelte";
   import Button from "../common/Button.svelte";
   import Select from "../common/Select.svelte";
-
-  import { InfiniteLoader, loaderState } from "svelte-infinite";
-
   import { InfiniteLoader, loaderState } from "svelte-infinite";
 
   let data: Group[] = $state([]);
@@ -238,7 +235,9 @@
               options={INTERFACES.map((item) => ({ value: item, label: item }))}
               bind:selected={data[group_index].interface}
             />
-            <Switch bind:checked={group.enable} />
+            <Tooltip value="Enable Group">
+              <Switch bind:checked={data[group_index].enable} />
+            </Tooltip>
             <Tooltip value="Delete Group">
               <Button small onclick={() => deleteGroup(group_index)}>
                 <Delete size={20} />

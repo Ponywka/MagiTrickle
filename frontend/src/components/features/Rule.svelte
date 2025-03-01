@@ -126,7 +126,9 @@
     />
   </div>
   <div class="actions">
-    <Switch bind:checked={rule.enable} class="interactive" />
+    <Tooltip value="Enable Rule">
+      <Switch bind:checked={rule.enable} class="interactive" />
+    </Tooltip>
     <Tooltip value="Delete Rule">
       <Button
         small
