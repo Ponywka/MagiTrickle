@@ -26,6 +26,7 @@
     })),
   );
   let counter = $state(-2); // skip first update on init
+  let valid_rules = $state(true);
 
   function onRuleDrop(event: CustomEvent) {
     const { from_group_index, from_rule_index, to_group_index, to_rule_index } = event.detail;
@@ -75,7 +76,12 @@
     counter = new_count;
     if (new_count == 0) return;
     console.debug("config state", value, new_count);
+    setTimeout(checkRulesValidityState, 10);
   });
+
+  function checkRulesValidityState() {
+    valid_rules = !document.querySelector(".rule input.invalid");
+  }
 
   function deleteGroup(index: number) {
     data.splice(index, 1);
@@ -181,7 +187,7 @@
 
 <div class="group-controls">
   <div class="group-controls-actions">
-    {#if counter > 0}
+    {#if counter > 0 && valid_rules}
       <div transition:scale>
         <Tooltip value="Save Changes">
           <Button onclick={saveChanges} id="save-changes">
