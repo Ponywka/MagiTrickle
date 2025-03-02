@@ -27,7 +27,7 @@ type Group struct {
 }
 
 func (g *Group) Enabled() bool {
-	panic("unimplemented")
+	return g.enabled.Load()
 }
 
 func NewGroup(group *models.Group, app *App) (*Group, error) {
@@ -44,7 +44,7 @@ func (g *Group) addIP(address net.IP, ttl uint32) error {
 func (g *Group) AddIP(address net.IP, ttl uint32) error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
-	if !g.enabled.Load() {
+	if !g.Enabled() {
 		return nil
 	}
 
@@ -61,7 +61,7 @@ func (g *Group) delIP(address net.IP) error {
 func (g *Group) DelIP(address net.IP) error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
-	if !g.enabled.Load() {
+	if !g.Enabled() {
 		return nil
 	}
 
@@ -78,7 +78,7 @@ func (g *Group) listIPs() (map[string]*uint32, error) {
 func (g *Group) ListIPs() (map[string]*uint32, error) {
 	g.locker.Lock()
 	defer g.locker.Unlock()
-	if !g.enabled.Load() {
+	if !g.Enabled() {
 		return nil, nil
 	}
 
@@ -167,7 +167,7 @@ func (g *Group) Enable() error {
 }
 
 func (g *Group) disable() error {
-	if !g.enabled.Load() {
+	if !g.Enabled() {
 		return nil
 	}
 	defer g.enabled.Store(false)
@@ -192,7 +192,7 @@ func (g *Group) Sync() error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
 
-	if !g.enabled.Load() {
+	if !g.Enabled() {
 		return nil
 	}
 
@@ -259,7 +259,7 @@ func (g *Group) NetfilterDHook(iptType, table string) error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
 
-	if !g.enabled.Load() {
+	if !g.Enabled() {
 		return nil
 	}
 
@@ -268,7 +268,7 @@ func (g *Group) NetfilterDHook(iptType, table string) error {
 	}
 
 	var errs []error
-	if g.enabled.Load() {
+	if g.Enabled() {
 		errs = append(errs, g.routerSpecificPatches(iptType, table))
 		errs = append(errs, g.ipsetToLink.NetfilterDHook(iptType, table))
 	}
@@ -280,7 +280,7 @@ func (g *Group) LinkUpdateHook(event netlink.LinkUpdate) error {
 	g.locker.Lock()
 	defer g.locker.Unlock()
 
-	if !g.enabled.Load() {
+	if !g.Enabled() {
 		return nil
 	}
 
