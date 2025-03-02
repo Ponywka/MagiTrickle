@@ -1,53 +1,27 @@
-package magitrickle
+package v1
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
+	"regexp"
 
 	"magitrickle/api/types"
 	"magitrickle/models"
 )
 
-func writeJson(w http.ResponseWriter, httpCode int, data interface{}) {
-	errJson, err := json.Marshal(data)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(httpCode)
-	w.Write(errJson)
-}
+var colorRegExp = regexp.MustCompile(`^#[0-9a-f]{6}$`)
 
-func writeError(w http.ResponseWriter, httpCode int, e string) {
-	writeJson(w, httpCode, types.ErrorRes{Error: e})
-}
-
-func readJson[T any](r *http.Request) (T, error) {
-	var req T
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		err = fmt.Errorf("failed to parse request: %w", err)
-	}
-	return req, err
-}
-
-// fromGroupReq конвертирует GroupReq в Group.
-func fromGroupReq(req types.GroupReq, existingGroup *models.Group) (*models.Group, error) {
+func FromGroupReq(req types.GroupReq, existing *models.Group) (*models.Group, error) {
 	var group *models.Group
-	if existingGroup == nil {
-		group = &models.Group{
-			ID: types.RandomID(),
-		}
+	if existing == nil {
+		group = &models.Group{ID: types.RandomID()}
 	} else {
-		group = existingGroup
+		group = existing
 	}
 	if req.ID != nil {
-		if existingGroup != nil && group.ID != *req.ID {
+		if existing != nil && group.ID != *req.ID {
 			return nil, fmt.Errorf("group ID mismatch")
 		}
-		if existingGroup == nil {
+		if existing == nil {
 			group.ID = *req.ID
 		}
 	}
@@ -66,7 +40,7 @@ func fromGroupReq(req types.GroupReq, existingGroup *models.Group) (*models.Grou
 	if req.Rules != nil {
 		newRules := make([]*models.Rule, len(*req.Rules))
 		for i, ruleReq := range *req.Rules {
-			r, err := fromRuleReq(ruleReq, group.Rules)
+			r, err := FromRuleReq(ruleReq, group.Rules)
 			if err != nil {
 				return nil, err
 			}
@@ -78,7 +52,7 @@ func fromGroupReq(req types.GroupReq, existingGroup *models.Group) (*models.Grou
 }
 
 // fromRuleReq конвертирует RuleReq в Rule.
-func fromRuleReq(ruleReq types.RuleReq, existingRules []*models.Rule) (*models.Rule, error) {
+func FromRuleReq(ruleReq types.RuleReq, existingRules []*models.Rule) (*models.Rule, error) {
 	var rule *models.Rule
 	if ruleReq.ID != nil {
 		for _, r := range existingRules {
@@ -100,15 +74,15 @@ func fromRuleReq(ruleReq types.RuleReq, existingRules []*models.Rule) (*models.R
 	return rule, nil
 }
 
-func toGroupsRes(groups []*models.Group, withRules bool) types.GroupsRes {
+func ToGroupsRes(groups []*models.Group, withRules bool) types.GroupsRes {
 	groupResList := make([]types.GroupRes, len(groups))
 	for i, group := range groups {
-		groupResList[i] = toGroupRes(group, withRules)
+		groupResList[i] = ToGroupRes(group, withRules)
 	}
 	return types.GroupsRes{Groups: &groupResList}
 }
 
-func toGroupRes(group *models.Group, withRules bool) types.GroupRes {
+func ToGroupRes(group *models.Group, withRules bool) types.GroupRes {
 	groupRes := types.GroupRes{
 		ID:        group.ID,
 		Name:      group.Name,
@@ -117,20 +91,20 @@ func toGroupRes(group *models.Group, withRules bool) types.GroupRes {
 		Enable:    group.Enable,
 	}
 	if withRules {
-		groupRes.RulesRes = toRulesRes(group.Rules)
+		groupRes.RulesRes = ToRulesRes(group.Rules)
 	}
 	return groupRes
 }
 
-func toRulesRes(rules []*models.Rule) types.RulesRes {
+func ToRulesRes(rules []*models.Rule) types.RulesRes {
 	ruleResList := make([]types.RuleRes, len(rules))
 	for i, rule := range rules {
-		ruleResList[i] = toRuleRes(rule)
+		ruleResList[i] = ToRuleRes(rule)
 	}
 	return types.RulesRes{Rules: &ruleResList}
 }
 
-func toRuleRes(rule *models.Rule) types.RuleRes {
+func ToRuleRes(rule *models.Rule) types.RuleRes {
 	return types.RuleRes{
 		ID:     rule.ID,
 		Name:   rule.Name,

@@ -1,6 +1,6 @@
 //go:build !kn
 
-package magitrickle
+package app
 
 func (g *Group) routerSpecificPatches(iptType, table string) error {
 	return nil
