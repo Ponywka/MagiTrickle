@@ -5,18 +5,13 @@ import (
 	"errors"
 	"fmt"
 	netfilterHelper "magitrickle/netfilter-helper"
-	"net"
-	"net/http"
 	"os"
 	"runtime/debug"
 	"strconv"
 	"syscall"
 
-	"magitrickle/api"
 	"magitrickle/constant"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netlink/nl"
@@ -94,14 +89,6 @@ func (a *App) Start(ctx context.Context) error {
 		}
 	}()
 
-	socketServer, err := a.setupUnixSocket(errChan)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = socketServer.Close()
-	}()
-
 	linkUpdateChannel, linkUpdateDone, err := subscribeLinkUpdates()
 	if err != nil {
 		return err
@@ -174,30 +161,6 @@ func createPIDFile() error {
 
 func removePIDFile() {
 	_ = os.Remove(pidFileLocation)
-}
-
-func (a *App) setupUnixSocket(errChan chan error) (*http.Server, error) {
-	if err := os.Remove(api.SocketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("failed to remove existing UNIX socket: %w", err)
-	}
-	socket, err := net.Listen("unix", api.SocketPath)
-	if err != nil {
-		return nil, fmt.Errorf("error while serving UNIX socket: %v", err)
-	}
-	srv := &http.Server{Handler: func() http.Handler {
-		r := chi.NewRouter()
-		r.Use(middleware.Recoverer)
-		return r
-	}()}
-	go func() {
-		err := srv.Serve(socket)
-		if err != nil && err != http.ErrServerClosed {
-			errChan <- fmt.Errorf("failed to serve UNIX socket: %v", err)
-		}
-		_ = socket.Close()
-		_ = os.Remove(api.SocketPath)
-	}()
-	return srv, nil
 }
 
 func (a *App) createNetfilterHelper() (*netfilterHelper.NetfilterHelper, error) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"syscall"
 
+	"magitrickle/api"
 	"magitrickle/constant"
 	v1 "magitrickle/internal/api/v1"
 	"magitrickle/internal/app"
@@ -28,21 +30,46 @@ const (
 	skinsFolderLocation    = constant.AppShareDir + "/skins"
 )
 
-func setupHTTP(a *app.App, errChan chan error) (*http.Server, error) {
+func setupUnixSocket(apiRouter chi.Router, errChan chan error) (*http.Server, error) {
+	if err := os.Remove(api.SocketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("failed to remove existing UNIX socket: %w", err)
+	}
+
+	socket, err := net.Listen("unix", api.SocketPath)
+	if err != nil {
+		return nil, fmt.Errorf("error while serving UNIX socket: %v", err)
+	}
+
+	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Mount("/api", apiRouter)
+
+	srv := &http.Server{
+		Handler: r,
+	}
+
+	go func() {
+		if e := srv.Serve(socket); e != nil && e != http.ErrServerClosed {
+			errChan <- fmt.Errorf("failed to serve UNIX socket: %v", e)
+		}
+		socket.Close()
+		os.Remove(api.SocketPath)
+	}()
+
+	return srv, nil
+}
+
+func setupHTTP(a *app.App, apiRouter chi.Router, errChan chan error) (*http.Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d",
 		a.Config().HTTPWeb.Host.Address, a.Config().HTTPWeb.Host.Port))
 	if err != nil {
 		return nil, fmt.Errorf("error while listening HTTP: %v", err)
 	}
 
-	// Создаем обработчик API и роутер
-	h := v1.NewHandler(a)
-	router := v1.NewRouter(h)
-
 	// Создаем основной роутер и монтируем API-роутер, а также статику
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Mount("/api", router)
+	r.Mount("/api", apiRouter)
 	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		originalFilePath := path.Clean(r.URL.Path)
 		filePath := path.Join(skinsFolderLocation, a.Config().HTTPWeb.Skin, originalFilePath)
@@ -111,7 +138,6 @@ func main() {
 		Str("commit", constant.Commit).
 		Msg("starting MagiTrickle daemon")
 
-	// Инициализация основного приложения
 	core := app.New()
 
 	log.Info().Msg("starting service")
@@ -119,20 +145,31 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Запуск приложения в отдельной горутине
+	// Запуск ядра приложения в горутине
 	appResult := make(chan error, 1)
 	go func() {
 		appResult <- core.Start(ctx)
 	}()
 
-	// Запуск HTTP сервера
+	// Создаем API-роутер
+	apiHandler := v1.NewHandler(core)
+	apiRouter := v1.NewRouter(apiHandler)
+
+	// Запуск HTTP сервера (для WebUI)
 	errChan := make(chan error, 1)
-	srv, err := setupHTTP(core, errChan)
+	srvHTTP, err := setupHTTP(core, apiRouter, errChan)
 	if err != nil {
 		log.Fatal().Err(err).Msg("setupHTTP error")
 	}
 
+	// Запуск UNIX-сокет сервера
+	srvUnix, err := setupUnixSocket(apiRouter, errChan)
+	if err != nil {
+		log.Fatal().Err(err).Msg("setupUnixSocket error")
+	}
+
 	addr := fmt.Sprintf("%s:%d", core.Config().HTTPWeb.Host.Address, core.Config().HTTPWeb.Host.Port)
+	log.Info().Msgf("Starting UNIX socket on %s", api.SocketPath)
 	log.Info().Msgf("Starting HTTP server on %s", addr)
 
 	// Обработка системных сигналов для graceful shutdown
@@ -143,12 +180,14 @@ func main() {
 	shutdown := func() {
 		log.Info().Msg("shutting down service")
 		cancel()
-		if err := srv.Shutdown(context.Background()); err != nil {
+		if err := srvHTTP.Shutdown(context.Background()); err != nil {
 			log.Error().Err(err).Msg("HTTP server shutdown error")
+		}
+		if err := srvUnix.Shutdown(context.Background()); err != nil {
+			log.Error().Err(err).Msg("UNIX socket server shutdown error")
 		}
 	}
 
-	// Ожидание завершения работы приложения, ошибки сервера или сигнала завершения
 	select {
 	case err := <-appResult:
 		if err != nil {
@@ -157,7 +196,7 @@ func main() {
 		once.Do(shutdown)
 	case err := <-errChan:
 		if err != nil {
-			log.Error().Err(err).Msg("HTTP server error")
+			log.Error().Err(err).Msg("server error")
 		}
 		once.Do(shutdown)
 	case sig := <-sigChan:
