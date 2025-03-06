@@ -535,3 +535,43 @@ func (h *Handler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+// LogsHandler отдает клиенту логи в формате SSE.
+func (h *Handler) LogsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	// Создаем подписку на лог-события.
+	sub := app.SubscribeLogs()
+	defer app.UnsubscribeLogs(sub)
+
+	// Отправляем приветственное сообщение клиенту.
+	_, _ = fmt.Fprintf(w, ": Connected to logs stream\n\n")
+	flusher.Flush()
+
+	ctx := r.Context()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Trace().
+				Str("api", "LogsHandler").
+				Msg("client disconnected")
+			return
+		case ev, ok := <-sub.Out():
+			if !ok {
+				return
+			}
+			// Отправляем клиенту событие в формате SSE.
+			_, _ = fmt.Fprintf(w, "data: {\"level\":\"%s\",\"message\":\"%s\"}\n\n", ev.Level, ev.Message)
+			flusher.Flush()
+		}
+	}
+}
