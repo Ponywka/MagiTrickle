@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -548,12 +549,12 @@ func (h *Handler) LogsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем подписку на лог-события.
+	// Слушаем вывод
 	sub := app.SubscribeLogs()
 	defer app.UnsubscribeLogs(sub)
 
-	// Отправляем приветственное сообщение клиенту.
-	_, _ = fmt.Fprintf(w, ": Connected to logs stream\n\n")
+	// Отправляем комментарий клиенту
+	_, _ = fmt.Fprintf(w, ": Connected!\n\n")
 	flusher.Flush()
 
 	ctx := r.Context()
@@ -569,8 +570,11 @@ func (h *Handler) LogsHandler(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			// Отправляем клиенту событие в формате SSE.
-			_, _ = fmt.Fprintf(w, "data: {\"level\":\"%s\",\"message\":\"%s\"}\n\n", ev.Level, ev.Message)
+			jsonData, err := json.Marshal(ev)
+			if err != nil {
+				continue
+			}
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", jsonData)
 			flusher.Flush()
 		}
 	}

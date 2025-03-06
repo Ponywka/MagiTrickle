@@ -43,7 +43,7 @@ func (a *App) Start(ctx context.Context) error {
 	}
 	defer removePIDFile()
 
-	SetupLogs(a.config.LogLevel)
+	SelectLogLevel(a.config.LogLevel)
 	a.initDNSMITM()
 
 	nfh, err := a.createNetfilterHelper()

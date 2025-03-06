@@ -2,7 +2,6 @@ package app
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 	"sync"
 
@@ -12,8 +11,9 @@ import (
 
 // LogEvent описывает структуру лог-события для API-подписок
 type LogEvent struct {
-	Level   string `json:"level"`
-	Message string `json:"message"`
+	Level   string                 `json:"level"`
+	Message string                 `json:"message"`
+	Fields  map[string]interface{} `json:"fields,omitempty"`
 }
 
 // LogSubscription представляет подписку на поток логов
@@ -54,7 +54,7 @@ func UnsubscribeLogs(sub *LogSubscription) {
 	sub.Close()
 }
 
-// notifySubscribers рассылает лог-событие всем активным подпискам; если у подписчика заполнен буфер, событие пропускается
+// notifySubscribers рассылает лог-событие всем активным подпискам
 func notifySubscribers(ev LogEvent) {
 	globalHub.mu.RLock()
 	defer globalHub.mu.RUnlock()
@@ -62,20 +62,25 @@ func notifySubscribers(ev LogEvent) {
 		select {
 		case sub.ch <- ev:
 		default:
-			// событие пропускается
+			// если заполнен буфер, событие пропускается
 		}
 	}
 }
 
-type dualWriter struct {
-	writer io.Writer
+// splitWriter – собственный writer, который в методе Write выполняет два действия:
+//  1. Интерцептирует исходное JSON-сообщение (которое генерирует zerolog),
+//     извлекает level, message и дополнительные поля, и уведомляет API-подписчиков.
+//  2. Передаёт исходное сообщение в ConsoleWriter для pretty‑вывода в консоль.
+type splitWriter struct {
+	console zerolog.ConsoleWriter
 }
 
-func (dw *dualWriter) Write(p []byte) (n int, err error) {
+func (sw *splitWriter) Write(p []byte) (n int, err error) {
 	var level, msg string
-
+	fields := make(map[string]interface{})
 	var data map[string]interface{}
 	if err := json.Unmarshal(p, &data); err != nil {
+		// Если не удалось распарсить, считаем, что это простой текст.
 		level = "info"
 		msg = string(p)
 	} else {
@@ -85,28 +90,39 @@ func (dw *dualWriter) Write(p []byte) (n int, err error) {
 		if m, ok := data["message"].(string); ok {
 			msg = m
 		}
+		// Копируем все дополнительные поля, кроме level и message
+		for k, v := range data {
+			if k == "level" || k == "message" {
+				continue
+			}
+			fields[k] = v
+		}
 	}
-
+	// Отправляем подписчикам полное событие в виде JSON
 	notifySubscribers(LogEvent{
 		Level:   level,
 		Message: msg,
+		Fields:  fields,
 	})
 
-	return dw.writer.Write(p)
+	return sw.console.Write(p)
 }
 
-// SetupLogs настраивает глобальный логгер
-func SetupLogs(logLevel string) {
+// SelectLogLevel выбирает уровень логирования по строке и устанавливает его глобально
+func SelectLogLevel(logLevel string) {
 	lvl, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
 		lvl = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(lvl)
+}
+
+// StartLogs настраивает глобальный логгер
+func StartLogs() {
 
 	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+	sw := &splitWriter{console: consoleWriter}
 
-	dw := &dualWriter{writer: consoleWriter}
-
-	logger := zerolog.New(dw).With().Timestamp().Logger()
+	logger := zerolog.New(sw).With().Timestamp().Logger()
 	log.Logger = logger
 }
