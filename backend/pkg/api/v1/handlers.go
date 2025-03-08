@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"magitrickle/api/types"
-	"magitrickle/internal/app"
 	"magitrickle/models"
+	"magitrickle/pkg/api/types"
+	"magitrickle/pkg/app"
 
 	"github.com/rs/zerolog/log"
 )

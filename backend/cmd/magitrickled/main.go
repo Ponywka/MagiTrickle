@@ -14,10 +14,10 @@ import (
 	"sync"
 	"syscall"
 
-	"magitrickle/api"
 	"magitrickle/constant"
-	v1 "magitrickle/internal/api/v1"
-	"magitrickle/internal/app"
+	"magitrickle/pkg/api"
+	v1 "magitrickle/pkg/api/v1"
+	"magitrickle/pkg/app"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
