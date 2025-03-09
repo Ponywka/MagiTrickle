@@ -14,10 +14,10 @@ import (
 	"sync"
 	"syscall"
 
-	"magitrickle/constant"
-	"magitrickle/pkg/api"
-	v1 "magitrickle/pkg/api/v1"
-	"magitrickle/pkg/app"
+	"github.com/Ponywka/MagiTrickle/constant"
+	"github.com/Ponywka/MagiTrickle/pkg/api"
+	v1 "github.com/Ponywka/MagiTrickle/pkg/api/v1"
+	"github.com/Ponywka/MagiTrickle/pkg/app"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

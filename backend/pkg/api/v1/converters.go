@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"regexp"
 
-	"magitrickle/models"
-	"magitrickle/pkg/api/types"
+	"github.com/Ponywka/MagiTrickle/models"
+	"github.com/Ponywka/MagiTrickle/pkg/api/types"
 )
 
 var colorRegExp = regexp.MustCompile(`^#[0-9a-f]{6}$`)

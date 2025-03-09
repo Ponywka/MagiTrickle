@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"magitrickle/pkg/api/types"
+	"github.com/Ponywka/MagiTrickle/pkg/api/types"
 
 	"github.com/go-chi/chi/v5"
 )
