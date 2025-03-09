@@ -6,8 +6,8 @@ import (
 	"net"
 	"time"
 
-	dnsMitmProxy "github.com/Ponywka/MagiTrickle/dns-mitm-proxy"
-	"github.com/Ponywka/MagiTrickle/records"
+	dnsMitmProxy "github.com/Ponywka/MagiTrickle/backend/dns-mitm-proxy"
+	"github.com/Ponywka/MagiTrickle/backend/records"
 
 	"github.com/miekg/dns"
 	"github.com/rs/zerolog/log"

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/Ponywka/MagiTrickle/pkg/api/types"
+	"github.com/Ponywka/MagiTrickle/backend/pkg/api/types"
 )
 
 type Group struct {

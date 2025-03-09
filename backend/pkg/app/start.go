@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/Ponywka/MagiTrickle/constant"
-	netfilterHelper "github.com/Ponywka/MagiTrickle/netfilter-helper"
+	"github.com/Ponywka/MagiTrickle/backend/constant"
+	netfilterHelper "github.com/Ponywka/MagiTrickle/backend/netfilter-helper"
 
 	"github.com/rs/zerolog"
 	"github.com/vishvananda/netlink"
